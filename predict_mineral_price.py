@@ -37,7 +37,10 @@ def get_prices():
     df_prices.index = df_prices['Element']
     df_prices.drop(['Element'], inplace=True, axis=1)
     df_prices.dropna(inplace=True, how='all')
-
+    df_prices = df_prices.iloc[:, 0:7]
+    for index in list(set(df_prices.index)):
+        df_prices.at[index, 'scaled_dollars'] = df_prices.loc[index, 'Dollars']/df_prices.loc[index, 'Dollars'].max()
+        df_prices.at[index, 'Dollars (Max)'] = df_prices.loc[index, 'Dollars'].max()
     return df_prices
 
 
@@ -53,9 +56,6 @@ def entries_to_remove(entries, the_dict):
     for key in entries:
         if key in the_dict:
             del the_dict[key]
-
-def make_index():
-    
 
 def get_total_production():
     file_name = r'HHI Indices by year, country, and element.xlsx'
@@ -73,7 +73,7 @@ def get_total_production():
     
     df_total_production = pd.DataFrame()
 #    df_total_production.loc[('a', 'a'), 'test'] = 'kaai'
-    
+
     for year in sheet_to_df_map:
         for element in sheet_to_df_map[year]['Element']:
             total_production = sheet_to_df_map[year]
@@ -81,7 +81,7 @@ def get_total_production():
             value = total_production['Total World Production'].dropna()
 
             df_total_production[int(year.split()[0])] = value
-    
+
     df_total_production = df_total_production.T
     df_scaled_total_production  = df_total_production/df_total_production.max()
     df_scaled_total_production = df_scaled_total_production.T
@@ -90,36 +90,189 @@ def get_total_production():
 #        plt.show()
 #        print(column)
 
-    return df_HHI
-#
-
+    return df_scaled_total_production
 
 
 
 #price_index = df_prices['Year','Price Index'] 
+# %%
 
 
 df_HHI = get_HHI()
 df_prices = get_prices()
-df_oil = get_oil_price()
+df_oil = get_oil_price().T
+# total production is scaled by maximum values to elimante units
+df_prod = get_total_production()
 
 
+# %%
 
 
-x_i = df_HHI.loc[element, year]
-y_i = df_prices.loc[element, year-1]
+def get_y(df_prices):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 1998:
+                continue
+            else:
+                # year is indexed to match the feature matrix. (ie year 1999 = 1998 as index)
+                y[(index, int(year)-1)] = df_prices[df_prices['Year'] == year].loc[index, 'scaled_dollars']
+    return y
 
 
+# %%
 
 
+def get_max(df_prices):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 1998:
+                continue
+            else:
+                # year is indexed to match the feature matrix. (ie year 1999 = 1998 as index)
+                y[(index, int(year)-1)] = df_prices[df_prices['Year'] == year].loc[index, 'Dollars (Max)']
+    return y
 
 
+# %%
 
 
+def get_dollars(df_prices):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 1998:
+                continue
+            else:
+                # year is indexed to match the feature matrix. (ie year 1999 = 1998 as index)
+                y[(index, int(year)-1)] = df_prices[df_prices['Year'] == year].loc[index, 'Dollars']
+    return y
 
 
+# %%
+
+def get_X_price(df_prices):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_prices[df_prices['Year'] == year].loc[index, 'scaled_dollars']
+    return y
 
 
+# %%
+
+
+def get_X_HHI(df_HHI):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_HHI.loc[index, year]
+    return y
+
+
+# %%
+
+
+def get_X_prod(df_prod):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_prod.loc[index, year]
+    return y
+
+
+# %%
+
+
+def get_X_oil_avg(df_oil):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_oil[year].loc['Average Price']
+    return y
+
+
+# %%
+
+
+def get_X_oil_prod(df_oil):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_oil[year].loc['Production']
+    return y
+
+
+# %%
+
+
+def get_X_price_index(df_oil):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 2015:
+                continue
+            else:
+                y[(index, int(year))] = df_oil[year].loc['Price Index']
+    return y
+
+
+# %%
+df_X = pd.DataFrame()
+
+X_price_index = pd.Series(get_X_price_index(df_oil))
+X_oil_prod = pd.Series(get_X_oil_prod(df_oil))
+X_oil_avg = pd.Series(get_X_oil_avg(df_oil))
+X_prod = pd.Series(get_X_prod(df_prod))
+X_HHI = pd.Series(get_X_HHI(df_HHI))
+X_price = pd.Series(get_X_price(df_prices))
+
+df_X['X_price_index'] = X_price_index
+df_X['X_oil_prod'] = X_oil_prod
+df_X['X_oil_avg'] = X_oil_avg
+df_X['X_prod'] = X_prod
+df_X['X_HHI'] = X_HHI
+df_X['X_price'] = X_price
+
+y = pd.Series(get_y(df_prices))
+
+dollars_max = pd.Series(get_max(df_prices))
+dollars = pd.Series(get_dollars(df_prices))
+
+# %%
+
+df_formatted = df_X.copy()
+df_formatted['Price (scaled, year+1)'] = y
+df_formatted['Price'] = dollars
+df_formatted['Price (Max)'] = dollars_max
+df_formatted.dropna(inplace=True)
+
+df_formatted.to_excel('formatted data.xlsx')
 
 
 
