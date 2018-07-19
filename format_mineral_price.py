@@ -140,7 +140,7 @@ def get_max(df_prices):
 # %%
 
 
-def get_dollars(df_prices):
+def get_dollars_i(df_prices):
     y = {}
     for index in list(set(df_prices.index)):
 #        print(index)
@@ -150,6 +150,19 @@ def get_dollars(df_prices):
             else:
                 # year is indexed to match the feature matrix. (ie year 1999 = 1998 as index)
                 y[(index, int(year)-1)] = df_prices[df_prices['Year'] == year].loc[index, 'Dollars']
+    return y
+
+
+def get_dollars_f(df_prices):
+    y = {}
+    for index in list(set(df_prices.index)):
+#        print(index)
+        for year in df_prices.loc[index, 'Year']:
+            if year == 1998:
+                continue
+            else:
+                # year is indexed to match the feature matrix. (ie year 1999 = 1998 as index)
+                y[(index, int(year))] = df_prices[df_prices['Year'] == year].loc[index, 'Dollars']
     return y
 
 
@@ -262,15 +275,20 @@ df_X['X_price'] = X_price
 y = pd.Series(get_y(df_prices))
 
 dollars_max = pd.Series(get_max(df_prices))
-dollars = pd.Series(get_dollars(df_prices))
+dollars_i = pd.Series(get_dollars_i(df_prices))
+dollars_f = pd.Series(get_dollars_f(df_prices))
 
 # %%
 
 df_formatted = df_X.copy()
 df_formatted['Price (scaled, year+1)'] = y
-df_formatted['Price'] = dollars
+df_formatted['dollars_i(year-1)'] = dollars_i
+df_formatted['dollars_f'] = dollars_f
 df_formatted['Price (Max)'] = dollars_max
 df_formatted.dropna(inplace=True)
+
+df_formatted['%_target'] = (df_formatted['dollars_f'] - df_formatted['dollars_i(year-1)'])/df_formatted['dollars_f']
+
 
 df_formatted.to_excel('formatted data.xlsx')
 
